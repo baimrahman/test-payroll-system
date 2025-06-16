@@ -48,7 +48,7 @@ export class CreateEmployeeAttendanceUseCase {
     startOfDay.setHours(0, 0, 0, 0);
 
     // check if the date is a weekend
-    const isWeekendDay = isWeekend(request.date);
+    const isWeekendDay = isWeekend(startOfDay);
     if (isWeekendDay) {
       throw new BusinessException('Cannot submit attendance on weekends');
     }
@@ -65,12 +65,12 @@ export class CreateEmployeeAttendanceUseCase {
       },
     });
 
-    if (attendance && attendance[0]) {
+    if (attendance) {
       if (request.type === 'check-in') {
         throw new BusinessException('Attendance already exists for this day');
       } else if (request.type === 'check-out') {
         await this.attendanceRepository.update({
-          where: { id: attendance[0].id },
+          where: { id: attendance.id },
           data: { checkOut: new Date() },
         });
       }

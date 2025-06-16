@@ -1,69 +1,184 @@
+// create a e2e test for the app
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
-import { CreateReimbursementDto } from '@domain/dtos';
+import { AppModule } from '../src/app.module';
+import { PrismaClient, UserRole } from '@prisma/client';
 
 describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
+  let prisma: PrismaClient;
+  let testUserId: string;
+  let testPayrollPeriodId: string;
+  let formattedDate: string;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    // Initialize Prisma client and clean up database
+    prisma = new PrismaClient();
+    await prisma.attendance.deleteMany();
+    await prisma.overtime.deleteMany();
+    await prisma.reimbursement.deleteMany();
+    await prisma.payslip.deleteMany();
+    await prisma.payrollPeriod.deleteMany();
+    await prisma.user.deleteMany();
+
+    // Create test user
+    const user = await prisma.user.create({
+      data: {
+        username: 'test',
+        password: 'test',
+        role: UserRole.EMPLOYEE,
+        salary: 1000,
+      },
+    });
+
+    testUserId = user.id;
+
+    // Set up the test date
+    const attendanceDate = new Date('2024-03-04');
+    formattedDate = attendanceDate.toISOString().split('T')[0];
   });
 
-  describe('End-to-End Flow', () => {
-    let userId: string;
-    let payrollPeriodId: string;
+  afterAll(async () => {
+    // Clean up in reverse order of dependencies
+    await prisma.attendance.deleteMany();
+    await prisma.overtime.deleteMany();
+    await prisma.reimbursement.deleteMany();
+    await prisma.payslip.deleteMany();
+    await prisma.payrollPeriod.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.$disconnect();
+    await app.close();
+  });
 
-    it('should create a user and admin', async () => {
-      const userResponse = await request(app.getHttpServer())
-        .post('/users')
-        .send({ name: 'Test User', role: 'USER' })
-        .expect(201);
-      userId = userResponse.body.id;
-
-      const adminResponse = await request(app.getHttpServer())
-        .post('/users')
-        .send({ name: 'Test Admin', role: 'ADMIN' })
-        .expect(201);
+  // create dummy user and admin using prisma
+  it('should create dummy user and admin using prisma', async () => {
+    const user = await prisma.user.findUnique({
+      where: { id: testUserId },
     });
 
-    it('should create a payroll period', async () => {
-      const payrollPeriodResponse = await request(app.getHttpServer())
-        .post('/payroll-periods')
-        .send({ startDate: '2023-01-01', endDate: '2023-01-31' })
-        .expect(201);
-      payrollPeriodId = payrollPeriodResponse.body.id;
+    const admin = await prisma.user.create({
+      data: {
+        username: 'admin',
+        password: 'admin',
+        role: UserRole.ADMIN,
+        salary: 1000,
+      },
     });
 
-    it('should create attendance, overtime, and reimbursement', async () => {
-      await request(app.getHttpServer())
-        .post('/attendance')
-        .send({ userId, payrollPeriodId, date: '2023-01-01', type: 'check-in' })
-        .expect(201);
+    expect(user).toBeDefined();
+    expect(admin).toBeDefined();
+    expect(user?.role).toBe('EMPLOYEE');
+    expect(admin?.role).toBe('ADMIN');
+  });
 
-      await request(app.getHttpServer())
-        .post('/overtime')
-        .send({ userId, payrollPeriodId, hours: 2, date: '2023-01-01' })
-        .expect(201);
+  // create payroll period using api
+  it('should create payroll period using api', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/payroll-period')
+      .send({
+        startDate: new Date('2024-03-01').toISOString(),
+        endDate: new Date('2024-03-31').toISOString(),
+      });
 
-      await request(app.getHttpServer())
-        .post('/reimbursement')
-        .send({ userId, payrollPeriodId, amount: 100, description: 'Test reimbursement' })
-        .expect(201);
-    });
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('id');
+    expect(response.body).toHaveProperty('startDate');
+    expect(response.body).toHaveProperty('endDate');
 
-    it('should process payroll', async () => {
-      await request(app.getHttpServer())
-        .post('/payroll/process')
-        .send({ payrollPeriodId })
-        .expect(200);
-    });
+    testPayrollPeriodId = response.body.id;
+  });
+
+  // create attendance using api
+  it('should create attendance using api', async () => {
+    // Then create the attendance
+    const response = await request(app.getHttpServer())
+      .post('/attendance')
+      .send({
+        userId: testUserId,
+        date: formattedDate,
+        type: 'check-in',
+        payrollPeriodId: testPayrollPeriodId,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('message');
+    expect(response.body.message).toBe('Attendance created successfully');
+  });
+
+  // make attendance check-out using api
+  it('should make attendance check-out using api', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/attendance')
+      .send({
+        userId: testUserId,
+        date: formattedDate,
+        type: 'check-out',
+        payrollPeriodId: testPayrollPeriodId,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('message');
+    expect(response.body.message).toBe('Attendance updated successfully');
+  });
+
+  // create overtime using api
+  it('should create overtime using api', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/overtime')
+      .send({
+        userId: testUserId,
+        date: new Date(formattedDate).toISOString(),
+        hours: 1,
+        payrollPeriodId: testPayrollPeriodId,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('id');
+    expect(response.body).toHaveProperty('userId', testUserId);
+    expect(response.body).toHaveProperty('hours', 1);
+    expect(response.body).toHaveProperty('status', 'PENDING');
+    expect(response.body).toHaveProperty('payrollPeriodId', testPayrollPeriodId);
+  });
+
+  // create reimbursement using api
+  it('should create reimbursement using api', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/reimbursement')
+      .send({
+        userId: testUserId,
+        amount: 100,
+        description: 'Test reimbursement',
+        payrollPeriodId: testPayrollPeriodId,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('id');
+    expect(response.body).toHaveProperty('userId', testUserId);
+    expect(response.body).toHaveProperty('amount', 100);
+    expect(response.body).toHaveProperty('description', 'Test reimbursement');
+    expect(response.body).toHaveProperty('status', 'PENDING');
+    expect(response.body).toHaveProperty('payrollPeriodId', testPayrollPeriodId);
+  });
+
+  // process payroll using api
+  it('should process payroll using api', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/payroll')
+      .send({
+        payrollPeriodId: testPayrollPeriodId,
+      });
+    
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({});
+
   });
 });
