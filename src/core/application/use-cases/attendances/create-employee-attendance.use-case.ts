@@ -44,7 +44,7 @@ export class CreateEmployeeAttendanceUseCase {
     }
 
     // make date to be the start of the day
-    const startOfDay = new Date(new Date().toISOString());
+    const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
     // check if the date is a weekend

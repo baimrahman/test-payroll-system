@@ -45,17 +45,24 @@ describe('CreateEmployeeAttendanceUseCase', () => {
     }).compile();
 
     useCase = module.get<CreateEmployeeAttendanceUseCase>(CreateEmployeeAttendanceUseCase);
+
+    // Mock Date to return a fixed date
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-03-18')); // Monday
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should successfully create a new attendance record (check-in)', async () => {
     userRepository.find.mockResolvedValue({ id: '1' });
     payrollPeriodRepository.find.mockResolvedValue({ id: '1' });
-    attendanceRepository.find.mockResolvedValue([]);
+    attendanceRepository.find.mockResolvedValue(null);
 
     const result = await useCase.execute({
       userId: '1',
       payrollPeriodId: '1',
-      date: new Date('2023-01-02'), // Monday
       type: 'check-in',
     });
 
@@ -66,12 +73,11 @@ describe('CreateEmployeeAttendanceUseCase', () => {
   it('should successfully update an existing attendance record (check-out)', async () => {
     userRepository.find.mockResolvedValue({ id: '1' });
     payrollPeriodRepository.find.mockResolvedValue({ id: '1' });
-    attendanceRepository.find.mockResolvedValue([{ id: '1' }]);
+    attendanceRepository.find.mockResolvedValue({ id: '1' });
 
     const result = await useCase.execute({
       userId: '1',
       payrollPeriodId: '1',
-      date: new Date('2023-01-02'), // Monday
       type: 'check-out',
     });
 
@@ -85,7 +91,6 @@ describe('CreateEmployeeAttendanceUseCase', () => {
     await expect(useCase.execute({
       userId: '999',
       payrollPeriodId: '1',
-      date: new Date('2023-01-02'), // Monday
       type: 'check-in',
     })).rejects.toThrow(BusinessException);
   });
@@ -97,19 +102,20 @@ describe('CreateEmployeeAttendanceUseCase', () => {
     await expect(useCase.execute({
       userId: '1',
       payrollPeriodId: '999',
-      date: new Date('2023-01-02'), // Monday
       type: 'check-in',
     })).rejects.toThrow(BusinessException);
   });
 
   it('should throw BusinessException when the date is a weekend', async () => {
+    // Set date to a Saturday
+    jest.setSystemTime(new Date('2024-03-23')); // Saturday
+
     userRepository.find.mockResolvedValue({ id: '1' });
     payrollPeriodRepository.find.mockResolvedValue({ id: '1' });
 
     await expect(useCase.execute({
       userId: '1',
       payrollPeriodId: '1',
-      date: new Date('2023-01-07'), // Saturday
       type: 'check-in',
     })).rejects.toThrow(BusinessException);
   });
@@ -117,12 +123,11 @@ describe('CreateEmployeeAttendanceUseCase', () => {
   it('should throw BusinessException when attendance already exists for the same day and payroll period', async () => {
     userRepository.find.mockResolvedValue({ id: '1' });
     payrollPeriodRepository.find.mockResolvedValue({ id: '1' });
-    attendanceRepository.find.mockResolvedValue([{ id: '1' }]);
+    attendanceRepository.find.mockResolvedValue({ id: '1' });
 
     await expect(useCase.execute({
       userId: '1',
       payrollPeriodId: '1',
-      date: new Date('2023-01-02'), // Monday
       type: 'check-in',
     })).rejects.toThrow(BusinessException);
   });

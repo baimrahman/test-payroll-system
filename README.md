@@ -73,12 +73,109 @@ pnpm prisma migrate dev
 pnpm start:dev
 ```
 
-### API Documentation
+## How-to Guides
 
-Once the application is running, you can access the Swagger documentation at:
+For detailed API documentation and usage examples, please visit the Swagger documentation at:
 ```
 http://localhost:3000/api
 ```
+
+The Swagger UI provides:
+- Complete API endpoint documentation
+- Request/response schemas
+- Interactive API testing interface
+- Authentication requirements
+- Example requests and responses
+
+Common operations include:
+- Employee management (create, update, delete)
+- Attendance tracking
+- Payroll generation
+- Payslip viewing
+- Reimbursement processing
+
+## API Documentation
+
+The API follows RESTful principles and is documented using Swagger/OpenAPI. Access the interactive documentation at:
+```
+http://localhost:3000/api
+```
+
+### Authentication
+
+All API endpoints require authentication using JWT tokens. Include the token in the Authorization header:
+```bash
+Authorization: Bearer <your-jwt-token>
+```
+
+### Rate Limiting
+
+API requests are rate-limited to 100 requests per minute per IP address.
+
+### Error Handling
+
+The API uses standard HTTP status codes and returns error responses in the following format:
+```json
+{
+  "statusCode": 400,
+  "message": "Error message",
+  "error": "Bad Request"
+}
+```
+
+## Architecture
+
+### Clean Architecture
+
+The project follows Clean Architecture principles with three main layers:
+
+1. **Domain Layer**
+   - Contains business entities and interfaces
+   - Defines core business rules
+   - Independent of external frameworks
+   - Located in `src/core/domain/`
+
+2. **Application Layer**
+   - Implements use cases and business logic
+   - Orchestrates the flow of data
+   - Depends only on the domain layer
+   - Located in `src/core/application/`
+
+3. **Infrastructure Layer**
+   - Handles external concerns
+   - Implements interfaces defined in the domain layer
+   - Includes database, logging, and external services
+   - Located in `src/core/infrastructure/`
+
+### Database Schema
+
+The system uses PostgreSQL with the following main tables:
+- employees
+- attendance
+- overtime
+- reimbursements
+- payroll
+- payslips
+- audit_logs
+
+### Security
+
+- JWT-based authentication
+- Role-based access control (RBAC)
+- Password hashing using bcrypt
+- Input validation using class-validator
+- CORS protection
+- Rate limiting
+
+### Logging
+
+The system uses Winston for logging with the following levels:
+- error: For error conditions
+- warn: For warning conditions
+- info: For informational messages
+- debug: For debug-level messages
+
+Logs are stored in both files and database for audit purposes.
 
 ## Testing
 
@@ -94,22 +191,50 @@ pnpm test:e2e
 pnpm test:cov
 ```
 
-## Architecture
+### Testing Strategy
 
-The project follows Clean Architecture principles:
+1. **Unit Tests**
+   - Test individual components in isolation
+   - Mock external dependencies
+   - Located in `*.spec.ts` files
 
-1. **Domain Layer**: Contains business entities and interfaces
-2. **Application Layer**: Implements use cases and business logic
-3. **Infrastructure Layer**: Handles external concerns (database, logging, etc.)
+2. **Integration Tests**
+   - Test component interactions
+   - Use test database
+   - Located in `*.integration.spec.ts` files
+
+3. **E2E Tests**
+   - Test complete user flows
+   - Use test environment
+   - Located in `test/` directory
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Create a Pull Request
+
+### Development Workflow
+
+1. Follow the Git Flow branching strategy
+2. Write tests for new features
+3. Update documentation
+4. Ensure code passes linting
+5. Create detailed PR descriptions
 
 ## License
 
 This project is licensed under the MIT License.
+
+## Support
+
+For support, please:
+1. Check the documentation
+2. Search existing issues
+3. Create a new issue with:
+   - Detailed description
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Environment details
