@@ -1,0 +1,93 @@
+import {
+  IAttendanceRepository,
+  IPayrollPeriodRepository,
+  IUserRepository,
+} from '@domain/repositories';
+import { CreateEmployeeAttendanceDto } from '@domain/dtos';
+import { Injectable } from '@nestjs/common';
+import { BusinessException } from '@domain/exceptions';
+import { isWeekend } from '@shared/utils';
+
+@Injectable()
+export class CreateEmployeeAttendanceUseCase {
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly payrollPeriodRepository: IPayrollPeriodRepository,
+    private readonly attendanceRepository: IAttendanceRepository,
+  ) {}
+
+  async execute(request: CreateEmployeeAttendanceDto) {
+    const user = await this.userRepository.find({
+      where: {
+        id: request.userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!user) {
+      throw new BusinessException('User not found');
+    }
+
+    const payrollPeriod = await this.payrollPeriodRepository.find({
+      where: {
+        id: request.payrollPeriodId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!payrollPeriod) {
+      throw new BusinessException('Payroll period not found');
+    }
+
+    // make date to be the start of the day
+    const startOfDay = new Date(request.date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    // check if the date is a weekend
+    const isWeekendDay = isWeekend(request.date);
+    if (isWeekendDay) {
+      throw new BusinessException('Cannot submit attendance on weekends');
+    }
+
+    // check if the attendance already exists
+    const attendance = await this.attendanceRepository.find({
+      where: {
+        userId: request.userId,
+        date: { equals: startOfDay },
+        payrollPeriodId: payrollPeriod.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    // if the attendance exists, update it
+    if (attendance && attendance[0]) {
+      await this.attendanceRepository.update({
+        where: { id: attendance[0].id },
+        data: {
+          ...(request.type === 'check-in' ? { checkIn: new Date() } : {}),
+          ...(request.type === 'check-out' ? { checkOut: new Date() } : {}),
+        } as any,
+      });
+    } else {
+      await this.attendanceRepository.create({
+        data: {
+          userId: request.userId,
+          date: startOfDay,
+          checkIn: request.type === 'check-in' ? new Date() : new Date(),
+          ...(request.type === 'check-out' ? { checkOut: new Date() } : {}),
+          payrollPeriodId: payrollPeriod.id,
+        },
+      });
+    }
+
+    return {
+      message: 'Attendance created successfully',
+    };
+  }
+}

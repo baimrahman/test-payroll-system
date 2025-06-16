@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(uuid())
+  username       String          @unique
+  password       String
+  role           UserRole        @default(EMPLOYEE)
+  salary         Float
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  attendances    Attendance[]
+  overtimes      Overtime[]
+  reimbursements Reimbursement[]
+  auditLogs      AuditLog[]
+}
+
+model Attendance {
+  id              String         @id @default(uuid())
+  userId          String
+  date            DateTime
+  checkIn         DateTime
+  checkOut        DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id])
+  payrollPeriod   PayrollPeriod @relation(fields: [payrollPeriodId], references: [id])
+  payrollPeriodId String
+  auditLogs       AuditLog[]     @relation("AttendanceAuditLog")
+}
+
+model Overtime {
+  id              String         @id @default(uuid())
+  userId          String
+  date            DateTime
+  hours           Float
+  status          OvertimeStatus @default(PENDING)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id])
+  payrollPeriod   PayrollPeriod @relation(fields: [payrollPeriodId], references: [id])
+  payrollPeriodId String
+  auditLogs       AuditLog[]     @relation("OvertimeAuditLog")
+}
+
+model Reimbursement {
+  id              String              @id @default(uuid())
+  userId          String
+  amount          Float
+  description     String
+  status          ReimbursementStatus @default(PENDING)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  user            User                @relation(fields: [userId], references: [id])
+  payrollPeriod   PayrollPeriod      @relation(fields: [payrollPeriodId], references: [id])
+  payrollPeriodId String
+  auditLogs       AuditLog[]          @relation("ReimbursementAuditLog")
+}
+
+model PayrollPeriod {
+  id             String          @id @default(uuid())
+  startDate      DateTime
+  endDate        DateTime
+  status         PayrollStatus   @default(PENDING)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  attendances    Attendance[]
+  overtimes      Overtime[]
+  reimbursements Reimbursement[]
+  payslips       Payslip[]
+  auditLogs      AuditLog[]      @relation("PayrollPeriodAuditLog")
+}
+
+model Payslip {
+  id                  String        @id @default(uuid())
+  userId              String
+  payrollPeriodId     String
+  baseSalary          Float
+  overtimePay         Float
+  reimbursements      Float
+  totalPay            Float
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  payrollPeriod       PayrollPeriod @relation(fields: [payrollPeriodId], references: [id])
+  auditLogs           AuditLog[]    @relation("PayslipAuditLog")
+}
+
+model AuditLog {
+  id            String         @id @default(uuid())
+  entityType    String
+  entityId      String
+  action        String
+  oldValue      Json?
+  newValue      Json?
+  userId        String
+  ipAddress     String
+  createdAt     DateTime       @default(now())
+  user          User           @relation(fields: [userId], references: [id])
+  attendance    Attendance?    @relation("AttendanceAuditLog", fields: [entityId], references: [id], map: "AttendanceAuditLog_fk")
+  overtime      Overtime?      @relation("OvertimeAuditLog", fields: [entityId], references: [id], map: "OvertimeAuditLog_fk")
+  reimbursement Reimbursement? @relation("ReimbursementAuditLog", fields: [entityId], references: [id], map: "ReimbursementAuditLog_fk")
+  payrollPeriod PayrollPeriod? @relation("PayrollPeriodAuditLog", fields: [entityId], references: [id], map: "PayrollPeriodAuditLog_fk")
+  payslip       Payslip?       @relation("PayslipAuditLog", fields: [entityId], references: [id], map: "PayslipAuditLog_fk")
+}
+
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+}
+
+enum OvertimeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReimbursementStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PayrollStatus {
+  PENDING
+  PROCESSED
+}
