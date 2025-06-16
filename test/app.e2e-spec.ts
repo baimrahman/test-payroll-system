@@ -12,6 +12,8 @@ describe('AppController (e2e)', () => {
   let testUserId: string;
   let testPayrollPeriodId: string;
   let formattedDate: string;
+  let employeeToken: string;
+  let adminToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -42,6 +44,33 @@ describe('AppController (e2e)', () => {
 
     testUserId = user.id;
 
+    // Create admin user
+    const admin = await prisma.user.create({
+      data: {
+        username: 'admin',
+        password: 'admin',
+        role: UserRole.ADMIN,
+        salary: 1000,
+      },
+    });
+
+    // Get tokens
+    const employeeLoginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        username: 'test',
+        password: 'test',
+      });
+    employeeToken = employeeLoginResponse.body.access_token;
+
+    const adminLoginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        username: 'admin',
+        password: 'admin',
+      });
+    adminToken = adminLoginResponse.body.access_token;
+
     // Set up the test date
     const attendanceDate = new Date('2024-03-04');
     formattedDate = attendanceDate.toISOString().split('T')[0];
@@ -59,31 +88,11 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  // create dummy user and admin using prisma
-  it('should create dummy user and admin using prisma', async () => {
-    const user = await prisma.user.findUnique({
-      where: { id: testUserId },
-    });
-
-    const admin = await prisma.user.create({
-      data: {
-        username: 'admin',
-        password: 'admin',
-        role: UserRole.ADMIN,
-        salary: 1000,
-      },
-    });
-
-    expect(user).toBeDefined();
-    expect(admin).toBeDefined();
-    expect(user?.role).toBe('EMPLOYEE');
-    expect(admin?.role).toBe('ADMIN');
-  });
-
   // create payroll period using api
   it('should create payroll period using api', async () => {
     const response = await request(app.getHttpServer())
       .post('/payroll-period')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         startDate: new Date('2024-03-01').toISOString(),
         endDate: new Date('2024-03-31').toISOString(),
@@ -99,9 +108,9 @@ describe('AppController (e2e)', () => {
 
   // create attendance using api
   it('should create attendance using api', async () => {
-    // Then create the attendance
     const response = await request(app.getHttpServer())
       .post('/attendance')
+      .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         userId: testUserId,
         date: formattedDate,
@@ -118,6 +127,7 @@ describe('AppController (e2e)', () => {
   it('should make attendance check-out using api', async () => {
     const response = await request(app.getHttpServer())
       .post('/attendance')
+      .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         userId: testUserId,
         date: formattedDate,
@@ -134,6 +144,7 @@ describe('AppController (e2e)', () => {
   it('should create overtime using api', async () => {
     const response = await request(app.getHttpServer())
       .post('/overtime')
+      .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         userId: testUserId,
         date: new Date(formattedDate).toISOString(),
@@ -153,6 +164,7 @@ describe('AppController (e2e)', () => {
   it('should create reimbursement using api', async () => {
     const response = await request(app.getHttpServer())
       .post('/reimbursement')
+      .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         userId: testUserId,
         amount: 100,
@@ -173,12 +185,12 @@ describe('AppController (e2e)', () => {
   it('should process payroll using api', async () => {
     const response = await request(app.getHttpServer())
       .post('/payroll')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         payrollPeriodId: testPayrollPeriodId,
       });
     
     expect(response.status).toBe(201);
     expect(response.body).toEqual({});
-
   });
 });

@@ -11,10 +11,12 @@ import { OvertimeModule } from './module/overtime/overtime.module';
 import { ReimbursementModule } from './module/reimbursement/reimbursement.module';
 import { PayrollModule } from './module/payroll/payroll.module';
 import { PayslipModule } from './module/payslip/payslip.module';
+import { AuthModule } from './module/auth/auth.module';
 
 @Module({
   imports: [
     CommonModule,
+    AuthModule,
     PayrollPeriodModule,
     AttendanceModule,
     OvertimeModule,
@@ -22,6 +24,10 @@ import { PayslipModule } from './module/payslip/payslip.module';
     PayrollModule,
     PayslipModule,
     RouterModule.register([
+      {
+        path: 'auth',
+        module: AuthModule,
+      },
       {
         path: 'payroll-period',
         module: PayrollPeriodModule,

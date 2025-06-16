@@ -11,14 +11,6 @@ export class CreateAttendanceRequestDto {
   userId: string;
 
   @ApiProperty({
-    description: 'The date of the attendance',
-    example: '2025-01-01',
-  })
-  @IsDate()
-  @Transform(({ value }) => new Date(value))
-  date: Date;
-
-  @ApiProperty({
     description: 'Type of attendance',
     example: 'check-in',
   })

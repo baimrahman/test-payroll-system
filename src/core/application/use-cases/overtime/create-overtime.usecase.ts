@@ -49,6 +49,10 @@ export class CreateOvertimeUseCase {
       where: {
         userId: req.userId,
         payrollPeriodId: req.payrollPeriodId,
+        date: {
+          gte: req.date,
+          lte: req.date,
+        },
       },
       select: {
         hours: true,
