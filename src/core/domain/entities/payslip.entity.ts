@@ -6,6 +6,8 @@ export class Payslip {
     overtimePay: number;
     reimbursements: number;
     totalPay: number;
+    totalHours: number;
+    totalOvertimeHours: number;
     createdAt: Date;
     updatedAt: Date;
 }

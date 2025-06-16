@@ -90,6 +90,8 @@ model Payslip {
   baseSalary          Float
   overtimePay         Float
   reimbursements      Float
+  totalHours          Float
+  totalOvertimeHours  Float
   totalPay            Float
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt

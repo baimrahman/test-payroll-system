@@ -1,7 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { ProcessPayrollUseCase } from '@application/use-cases/payroll/process-payroll.use-case';
-import { ProcessPayrollRequest } from '../dtos/process-payroll-request';
+import { ProcessPayrollRequestDto } from '../dtos/process-payroll-request.dto';
 
 @Controller()
 @ApiTags('Payroll')
@@ -10,9 +10,9 @@ export class PayrollController {
 
   @Post('/')
   @ApiOperation({ summary: 'Process payroll' })
-  @ApiBody({ type: ProcessPayrollRequest })
+  @ApiBody({ type: ProcessPayrollRequestDto })
   @ApiResponse({ status: 201, description: 'Payroll processed successfully' })
-  async processPayroll(@Body() body: ProcessPayrollRequest) {
+  async processPayroll(@Body() body: ProcessPayrollRequestDto) {
     return this.processPayrollUseCase.execute(body);
   }
 }

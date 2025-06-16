@@ -10,6 +10,7 @@ import { AttendanceModule } from './module/attendance/attendance.module';
 import { OvertimeModule } from './module/overtime/overtime.module';
 import { ReimbursementModule } from './module/reimbursement/reimbursement.module';
 import { PayrollModule } from './module/payroll/payroll.module';
+import { PayslipModule } from './module/payslip/payslip.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PayrollModule } from './module/payroll/payroll.module';
     OvertimeModule,
     ReimbursementModule,
     PayrollModule,
+    PayslipModule,
     RouterModule.register([
       {
         path: 'payroll-period',
@@ -39,6 +41,10 @@ import { PayrollModule } from './module/payroll/payroll.module';
       {
         path: 'payroll',
         module: PayrollModule,
+      },
+      {
+        path: 'payslip',
+        module: PayslipModule,
       },
     ]),
     ConfigModule.forRoot({

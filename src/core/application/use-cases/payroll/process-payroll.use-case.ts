@@ -124,6 +124,8 @@ export class ProcessPayrollUseCase {
           baseSalary: totalHoursPay,
           overtimePay: totalOvertimePay,
           reimbursements: totalReimbursements,
+          totalHours: totalHoursWorked,
+          totalOvertimeHours: totalOvertimeHours,
           totalPay,
         },
       });
