@@ -3,7 +3,7 @@ export class Attendance {
   userId: string;
   date: Date;
   checkIn: Date;
-  checkOut?: Date;
+  checkOut: Date;
   payrollPeriodId: string;
   createdAt: Date;
   updatedAt: Date;

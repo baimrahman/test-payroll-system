@@ -80,7 +80,13 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@infrastructure/(.*)$": "<rootDir>/core/infrastructure/$1",
+      "^@application/(.*)$": "<rootDir>/core/application/$1",
+      "^@domain/(.*)$": "<rootDir>/core/domain/$1",
+      "^@shared/(.*)$": "<rootDir>/core/shared/$1"
+    }
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

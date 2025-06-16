@@ -65,26 +65,29 @@ export class CreateEmployeeAttendanceUseCase {
       },
     });
 
-    // if the attendance exists, update it
     if (attendance && attendance[0]) {
-      await this.attendanceRepository.update({
-        where: { id: attendance[0].id },
-        data: {
-          ...(request.type === 'check-in' ? { checkIn: new Date() } : {}),
-          ...(request.type === 'check-out' ? { checkOut: new Date() } : {}),
-        } as any,
-      });
-    } else {
-      await this.attendanceRepository.create({
-        data: {
-          userId: request.userId,
-          date: startOfDay,
-          checkIn: request.type === 'check-in' ? new Date() : new Date(),
-          ...(request.type === 'check-out' ? { checkOut: new Date() } : {}),
-          payrollPeriodId: payrollPeriod.id,
-        },
-      });
+      if (request.type === 'check-in') {
+        throw new BusinessException('Attendance already exists for this day');
+      } else if (request.type === 'check-out') {
+        await this.attendanceRepository.update({
+          where: { id: attendance[0].id },
+          data: { checkOut: new Date() },
+        });
+      }
+      return {
+        message: 'Attendance updated successfully',
+      };
     }
+
+    await this.attendanceRepository.create({
+      data: {
+        userId: request.userId,
+        date: startOfDay,
+        checkIn: new Date(),
+        checkOut: new Date(),
+        payrollPeriodId: payrollPeriod.id,
+      },
+    });
 
     return {
       message: 'Attendance created successfully',
